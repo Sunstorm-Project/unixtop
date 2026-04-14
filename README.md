@@ -42,6 +42,13 @@ target.
 
     make check
 
+Further reading
+---------------
+
+- [`FAQ.md`](FAQ.md) — usage, OS-specific gotchas, Y2038 note.
+- [`Porting.md`](Porting.md) — how to add support for a new OS.
+- [`Changes`](Changes) — release history (preserved from upstream).
+
 Version
 -------
 
