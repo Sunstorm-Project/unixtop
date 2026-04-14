@@ -1,7 +1,9 @@
 unixtop
 =======
 
-Unix Top is written by William LeFebvre, see http://www.unixtop.org.
+Unix Top was written by William LeFebvre. The original home
+(`unixtop.org`) is defunct; the last pre-fork release was 3.8beta1
+(May 2008).
 Current maintainer of this fork: **Julian Wolfe** (Sunstorm Project).
 
 This is a Sunstorm Project fork that:

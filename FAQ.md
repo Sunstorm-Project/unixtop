@@ -1,9 +1,11 @@
 unixtop — FAQ
 =============
 
-This FAQ covers the Sunstorm Project fork. For upstream's historical
-FAQ (SourceForge mailing lists, ftp.unixtop.org, SunOS 4.1.x, MacOSX
-pre-release, etc.) see the git history before v3.9.
+This FAQ covers the Sunstorm Project fork. Upstream (`unixtop.org`,
+the SourceForge project, the `ftp.unixtop.org` distribution site)
+is defunct — last pre-fork release was 3.8beta1 in May 2008. For the
+historical FAQ content (SunOS 4.1.x, MacOSX pre-release, FreeBSD
+kvm/sysctl guidance, etc.) see the git history before v3.9.
 
 General
 -------
