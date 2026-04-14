@@ -15,7 +15,7 @@
  * DESCRIPTION:
  * Machine-dependent module for Solaris. Reads per-process data from
  * /proc/<pid>/psinfo (psinfo_t, documented in proc(4)), system-wide
- * state from kstat, and swap totals from swapctl(SC_AINFO).
+ * state from kstat, and swap totals from swapctl(SC_GETNSWP/SC_LIST).
  *
  * LIBS: -lkstat
  *
@@ -316,8 +316,13 @@ machine_init(struct statics *statics)
         return -1;
     }
 
-    pagesize_kb = sysconf(_SC_PAGESIZE) / 1024;
-    if (pagesize_kb <= 0) pagesize_kb = 4;
+    {
+        long ps = sysconf(_SC_PAGESIZE);
+        /* sysconf(_SC_PAGESIZE) can't fail on Solaris, but a wrapper
+         * that mis-defines it would wreck every memory calc below.
+         * Fall back to 8 KB (SPARC native) if the value looks bogus. */
+        pagesize_kb = (ps >= 1024) ? (ps / 1024) : 8;
+    }
     clock_tick = sysconf(_SC_CLK_TCK);
     if (clock_tick <= 0) clock_tick = 100;
 
@@ -439,9 +444,16 @@ read_swap_stats(void)
                 for (i = 0; i < n; i++)
                     st->swt_ent[i].ste_path = paths + i * MAXPATHLEN;
 
-                if (swapctl(SC_LIST, st) >= 0)
+                /* swapctl(SC_LIST) returns the number of entries it
+                 * actually filled. It may be < n if a swap device went
+                 * away between SC_GETNSWP and SC_LIST. Iterate only
+                 * over what came back so we don't sum uninitialised
+                 * swapent data. */
+                int got = swapctl(SC_LIST, st);
+                if (got > 0)
                 {
-                    for (i = 0; i < n; i++)
+                    if (got > n) got = n;
+                    for (i = 0; i < got; i++)
                     {
                         total_pg += st->swt_ent[i].ste_pages;
                         free_pg  += st->swt_ent[i].ste_free;
@@ -517,7 +529,11 @@ read_one_psinfo(pid_t pid, struct top_proc *proc, struct process_select *sel)
     snprintf(path, sizeof(path), PROCFS "/%ld/psinfo", (long)pid);
     if ((fd = open(path, O_RDONLY)) < 0)
         return -1;
-    got = read(fd, &ps, sizeof(ps));
+    /* Retry on EINTR — top arms a SIGALRM for its refresh cadence and
+     * the signal can land between open() and read(). */
+    do {
+        got = read(fd, &ps, sizeof(ps));
+    } while (got < 0 && errno == EINTR);
     close(fd);
     if (got != (ssize_t)sizeof(ps))
         return -1;
@@ -608,7 +624,6 @@ get_process_info(struct system_info *si,
     while ((ent = readdir(dir)) != NULL)
     {
         pid_t pid;
-        unsigned long otime;
 
         if (!isdigit(ent->d_name[0]))
             continue;
@@ -622,8 +637,10 @@ get_process_info(struct system_info *si,
             proc->time = 0;
             hash_add_pid(ptable, pid, (void *)proc);
         }
-        otime = proc->time;
 
+        /* psinfo's pr_pctcpu is already a recency-weighted fraction,
+         * so unlike m_linux.c we don't need to diff cpu-ticks against
+         * the previous sample here. */
         if (read_one_psinfo(pid, proc, sel) < 0)
         {
             proc->state = 0;    /* will be reaped below */
@@ -634,11 +651,6 @@ get_process_info(struct system_info *si,
         total_procs++;
         if (proc->state >= 1 && proc->state <= NPROCSTATES - 1)
             process_states[proc->state]++;
-
-        /* psinfo pr_pctcpu already reflects recent activity, but keep
-         * the delta-based path available if/when pr_pctcpu is stale. */
-        if (otime == 0)
-            ; /* first sighting: trust pr_pctcpu from psinfo */
     }
     closedir(dir);
 
@@ -821,7 +833,9 @@ proc_owner(int pid)
     snprintf(path, sizeof(path), PROCFS "/%d/psinfo", pid);
     if ((fd = open(path, O_RDONLY)) < 0)
         return -1;
-    got = read(fd, &ps, sizeof(ps));
+    do {
+        got = read(fd, &ps, sizeof(ps));
+    } while (got < 0 && errno == EINTR);
     close(fd);
     if (got != (ssize_t)sizeof(ps))
         return -1;
