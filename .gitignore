@@ -18,3 +18,10 @@
 *.app
 
 *.swp
+
+# Build artifacts
+top
+tests/test_utils
+tests/test_hash
+tests/*.host.o
+tests/*.dSYM/
