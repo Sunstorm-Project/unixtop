@@ -51,8 +51,42 @@ OBJS        = $(SRCS:.c=.o)
 
 ALL_CPPFLAGS = -DHAVE_CONFIG_H -I. $(CPPFLAGS)
 
-.PHONY: all clean install help
+.PHONY: all clean install help check
 .DEFAULT_GOAL := all
+
+# ---- Unit tests ------------------------------------------------------
+# `make check` builds and runs unit tests on the BUILD HOST using
+# HOST_CC, not the cross compiler. Tests cover the portable shared
+# modules (utils.c, hash.c) — the machine-specific m_*.c modules can't
+# be exercised off-target. Tests are skipped silently if HOST_CC is
+# unavailable so cross-build pipelines can choose to opt in/out.
+HOST_CC      ?= cc
+# utils.c references HZ (clock ticks/sec), which glibc only exposes
+# under _DEFAULT_SOURCE and macOS doesn't expose at all. Provide a
+# matching default explicitly so the host test build is portable.
+HOST_CFLAGS  ?= -O0 -g -Wall -Wno-unused-function -Wno-macro-redefined -DHZ=100
+TEST_DIR     := tests
+TESTS        := $(TEST_DIR)/test_utils $(TEST_DIR)/test_hash
+
+# Tests link against host-built copies of the portable sources so that
+# running `make check` after a cross `make` doesn't trip over target
+# object files. Keep the host object files out of the main build tree.
+HOST_OBJS    := $(TEST_DIR)/utils.host.o $(TEST_DIR)/hash.host.o
+
+$(TEST_DIR)/%.host.o: %.c
+	$(HOST_CC) $(HOST_CFLAGS) -DHAVE_CONFIG_H -I. -c -o $@ $<
+
+$(TEST_DIR)/test_utils: $(TEST_DIR)/test_utils.c $(HOST_OBJS)
+	$(HOST_CC) $(HOST_CFLAGS) -I. -o $@ $< $(HOST_OBJS) -lm
+
+$(TEST_DIR)/test_hash: $(TEST_DIR)/test_hash.c $(HOST_OBJS)
+	$(HOST_CC) $(HOST_CFLAGS) -I. -o $@ $< $(HOST_OBJS)
+
+check: $(TESTS)
+	@set -e; for t in $(TESTS); do \
+	    echo "==> $$t"; ./$$t; \
+	done
+	@echo "All tests passed."
 
 all: top
 
@@ -68,12 +102,13 @@ install: top
 	[ -f top.1 ] && $(INSTALL) -m 0644 top.1 $(DESTDIR)$(MANDIR)/top.1 || true
 
 clean:
-	rm -f top $(OBJS)
+	rm -f top $(OBJS) $(HOST_OBJS) $(TESTS)
 
 help:
-	@echo "Targets: all (default), install, clean"
+	@echo "Targets: all (default), check, install, clean"
 	@echo "Knobs:   CC, CFLAGS, CPPFLAGS, LDFLAGS, LIBS,"
 	@echo "         MODULE (linux|solaris), PREFIX, DESTDIR"
+	@echo "Host-side test knobs: HOST_CC, HOST_CFLAGS"
 
 # Minimal header dependency hints — not exhaustive, but covers the
 # files that change most often during porting work.
