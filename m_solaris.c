@@ -57,10 +57,13 @@
 #define PROCFS "/proc"
 extern char *myname;
 
-/* Solaris scales avenrun_* kstat values by FSCALE = 256. */
+/* Solaris scales avenrun_* kstat values by FSCALE (from <sys/param.h>,
+ * typically 256). Use a dedicated double-valued constant so we never
+ * accidentally integer-divide a uint32_t by the integer FSCALE macro. */
 #ifndef FSCALE
-#define FSCALE 256.0
+#define FSCALE 256
 #endif
+#define FSCALE_D ((double)FSCALE)
 
 /* psinfo pr_pctcpu is fixed-point: fraction = pr_pctcpu / 0x8000. */
 #define PCT_TO_DOUBLE(p) ((double)(p) / 0x8000)
@@ -147,10 +150,10 @@ static char fmt_header[] =
 "    PID X         THR PRI NICE  SIZE   RES STATE    TIME    CPU COMMAND";
 
 static char proc_header_thr[] =
-" PID %-9s THR  PR  NI  SIZE   RES   SHR S  P    TIME+   CPU%% COMMAND";
+"    PID %-9s THR  PR  NI  SIZE   RES   SHR S  P    TIME+   CPU%% COMMAND";
 
 static char proc_header_nothr[] =
-" TID %-9s   TGID  PR  NI  SIZE   RES   SHR S  P    TIME+   CPU%% COMMAND";
+"    TID %-9s   TGID  PR  NI  SIZE   RES   SHR S  P    TIME+   CPU%% COMMAND";
 
 char *ordernames[] = {
     "cpu", "size", "res", "time", "command", "threads", NULL
@@ -202,9 +205,9 @@ static long swap_stats[NSWAPSTATS];
 
 static kstat_ctl_t *kc = NULL;
 
-/* from utils.c */
-extern void percentages(int, int *, long *, long *, long *);
-extern void printable(char *);
+/* percentages() and printable() are declared in utils.h (already
+ * included) — percentages returns long, printable returns char *, so
+ * redeclaring here would conflict. */
 
 /*======================================================================*/
 
@@ -467,11 +470,11 @@ read_load_and_lastpid(struct system_info *info)
     {
         kstat_named_t *kn;
         if ((kn = kstat_data_lookup(ksp, "avenrun_1min")) != NULL)
-            info->load_avg[0] = kn->value.ui32 / FSCALE;
+            info->load_avg[0] = kn->value.ui32 / FSCALE_D;
         if ((kn = kstat_data_lookup(ksp, "avenrun_5min")) != NULL)
-            info->load_avg[1] = kn->value.ui32 / FSCALE;
+            info->load_avg[1] = kn->value.ui32 / FSCALE_D;
         if ((kn = kstat_data_lookup(ksp, "avenrun_15min")) != NULL)
-            info->load_avg[2] = kn->value.ui32 / FSCALE;
+            info->load_avg[2] = kn->value.ui32 / FSCALE_D;
     }
 }
 
