@@ -1,3 +1,17 @@
+Mon Apr 13 2026 - Sunstorm Project (3.9)
+	Added Solaris 7+ OS module (m_solaris.c) using /proc/<pid>/psinfo,
+	kstat (cpu_stat / unix:0:system_misc / unix:0:system_pages), and
+	swapctl(SC_GETNSWP/SC_LIST).
+	Added a proper Makefile with MODULE=linux|solaris selection; all
+	cross-compile knobs (CC/CFLAGS/CPPFLAGS/LDFLAGS/LIBS/PREFIX/DESTDIR)
+	are overridable. Per-module default LIBS baked in.
+	Added host-side unit tests under tests/, invoked via `make check`,
+	covering the portable utils.c and hash.c shared modules.
+	Removed stale scaffolding that's now superseded: the hand-rolled
+	build.sh bootstrap script, and the INSTALL and README text files
+	that documented an autoconf workflow this fork does not carry.
+	README.md is now the single source of build/install documentation.
+
 Tue May  6 2008 - wnl (3.8beta1)
 	Main code: fixed bugs in screen_cleareol and in display code. Fixed
 	bug in i_swap when all data is 0.  Added ^W patch (from thaquis).

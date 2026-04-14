@@ -229,13 +229,13 @@
 #define PACKAGE_NAME "top"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "top 3.8beta1"
+#define PACKAGE_STRING "top 3.9"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "top"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "3.8beta1"
+#define PACKAGE_VERSION "3.9"
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void
