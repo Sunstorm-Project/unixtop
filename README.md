@@ -1,7 +1,8 @@
 unixtop
 =======
 
-Unix Top is written by William LeFebvre, see http://www.unixtop.org
+Unix Top is written by William LeFebvre, see http://www.unixtop.org.
+Current maintainer of this fork: **Firefly** (Sunstorm Project).
 
 This is a Sunstorm Project fork that:
 
